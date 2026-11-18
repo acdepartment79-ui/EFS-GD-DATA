@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EFS GD Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--tx:#17212b;--mut:#66727f;--bd:#dde3ea;--pri:#1f5fbf;--pri2:#e8f0fc;--ok:#d9f2c4;--warn:#ffd88a;--bad:#ffc9c9;--yel:#fff59a;--hd:#101820;--hdt:#fff;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1419;--card:#18202a;--tx:#e8edf2;--mut:#93a0ad;--bd:#2b3643;--pri:#5b9bff;--pri2:#1b2c47;--ok:#24401a;--warn:#5a4310;--bad:#5a1f1f;--yel:#4d4a0d;--hd:#0a0f14;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1419;--card:#18202a;--tx:#e8edf2;--mut:#93a0ad;--bd:#2b3643;--pri:#5b9bff;--pri2:#1b2c47;--ok:#24401a;--warn:#5a4310;--bad:#5a1f1f;--yel:#4d4a0d;--hd:#0a0f14;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--hd);color:var(--hdt);padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+header h1{font-size:18px;margin:0}nav{display:flex;gap:4px}
+nav button{background:transparent;color:#cfd8e3;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:14px}
+nav button.on{background:var(--pri);color:#fff}
+main{padding:16px 10px;max-width:none;margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px}
+.card small{color:var(--mut);display:block}.card b{font-size:20px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.bar .sp{flex:1}
+button.b,label.b{background:var(--card);color:var(--tx);border:1px solid var(--bd);padding:7px 12px;border-radius:7px;cursor:pointer;font-size:13px;display:inline-block}
+button.b:hover,label.b:hover{border-color:var(--pri)}button.p{background:var(--pri);color:#fff;border-color:var(--pri)}button.d{color:#c0392b}
+input,select{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:7px;padding:7px 9px;font:inherit;width:100%}
+.bar input{width:240px}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--bd);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:0;table-layout:auto}
+th{background:var(--hd);color:var(--hdt);padding:8px 4px;text-align:center;font-size:11px;position:sticky;top:0}
+td{padding:6px 4px;border-top:1px solid var(--bd);text-align:center;font-size:12px;word-break:break-word}
+tr.r{cursor:pointer}tr.r:hover td{background:var(--pri2)}
+.y td{background:var(--yel)}.g td{background:var(--ok)}.o td{background:var(--warn)}.x td{background:var(--bad)}
+.neg{color:#c0392b;font-weight:600}.empty{padding:30px;text-align:center;color:var(--mut)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal.on{display:flex}.mb{background:var(--card);border-radius:12px;padding:18px;width:100%;max-width:560px;max-height:90vh;overflow:auto}
+.mb h2{margin:0 0 12px;font-size:17px}.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg label{font-size:12px;color:var(--mut);display:block}.fg .w{grid-column:1/-1}
+.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+.hide{display:none}.note{color:var(--mut);font-size:12px;margin:8px 0}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--hd);color:#fff;padding:10px 16px;border-radius:8px;display:none;z-index:30}
+.bar select{width:auto}.bar input[type=date]{width:auto}input[type=checkbox]{width:auto}.bar small{color:var(--mut)}
+@media(max-width:600px){.fg{grid-template-columns:1fr}.bar input{width:100%}}
+</style></head><body>
+<header><h1>EFS GD Tracker</h1>
+<nav><button data-v="dash" class="on">Dashboard</button><button data-v="all">All EFS GD</button><button data-v="usage">Usage Entries</button></nav>
+<div class="bar" style="margin:0"><button class="b p" id="rep">EFS Report</button><button class="b" id="lk">GitHub sync</button><button class="b" id="bk">Backup</button>
+<label class="b">Restore<input type="file" id="rs" accept=".json" class="hide"></label></div></header>
+<main>
+<section id="dash"><div class="cards" id="cards"></div>
+<div class="bar"><input id="q" placeholder="Search EFS GD, item, HS code, country…">
+<select id="fc"></select><select id="fi"></select><select id="fl"><option value="">All status</option><option value="open">With balance</option><option value="zero">Fully used</option><option value="soon">Expiring within 3 months</option></select> <select id="so">
+  <option value="dn">Date: newest first</option>
+  <option value="do">Date: oldest first</option>
+  <option value="an">Added: latest entered first</option>
+  <option value="ao">Added: first entered first</option>
+  <option value="gd">EFS GD# A to Z</option>
+  <option value="bh">Balance: high to low</option>
+  <option value="bl">Balance: low to high</option>
+</select> <small>From</small><input type="date" id="df"> <small>To</small><input type="date" id="dt"> <button class="b" id="clr">Reset</button>
+<span class="sp"></span>
+<button class="b" id="tplE">Template</button>
+<label class="b">Bulk import EFS<input type="file" id="impE" accept=".xlsx,.xls,.csv" class="hide"></label>
+<button class="b" id="expE">Export Excel</button><button class="b p" id="addE">+ Add EFS GD</button></div>
+<div class="tw"><table><thead><tr><th>EFS GD#</th><th>QUANTITY</th><th>CUSTOM VALUE</th><th>ITEM NAME</th><th>HS CODE</th><th>TAX %</th><th>COUNTRY</th><th>USED</th><th>BALANCE</th><th>ANALYSIS CERT. NO</th><th>DATE</th><th>TIME LEFT</th><th>CLEARED ✓</th></tr></thead><tbody id="eb"></tbody></table></div>
+<p class="note">Tick ✓ to mark an EFS GD as cleared: it leaves the Dashboard and stays listed under All EFS GD. Click any EFS GD row to see its usage record. Time left counts 18 months from the EFS date.</p></section>
+
+<section id="det" class="hide"></section>
+
+<section id="usage" class="hide">
+<div class="bar"><input id="qu" placeholder="Search usage…"><select id="ue"></select> <small>From</small><input type="date" id="udf"> <small>To</small><input type="date" id="udt"> <button class="b" id="clu">Reset</button><span class="sp"></span>
+<button class="b" id="tplU">Template</button>
+<label class="b">Bulk import usage<input type="file" id="impU" accept=".xlsx,.xls,.csv" class="hide"></label>
+<button class="b" id="expU">Export Excel</button><button class="b p" id="addU">+ Add Usage</button></div>
+<div class="tw"><table><thead><tr><th>DATE</th><th>EFS GD#</th><th>ITEM NAME &amp; HS CODE</th><th>EXPORT GD#</th><th>USED MATERIAL QTY</th><th>USED MATERIAL VALUE</th><th>EXPORT QTY</th><th>EXPORT VALUE</th><th></th></tr></thead><tbody id="ub"></tbody></table></div></section>
+</main>
+<div class="modal" id="md"><div class="mb" id="mbx"></div></div><div id="toast"></div>
+<script>
+var D={efs:[],usage:[]},KEY="efs_tracker_v1",view="dash",mode="dash",cur=null;
+function load(){try{var s=localStorage.getItem(KEY);if(s)D=JSON.parse(s)}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}ghPush()}
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function nf(n){return (+n||0).toLocaleString("en-US",{maximumFractionDigits:4})}
+var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fd(s){if(!s)return"";var p=s.split("-");return +p[2]+"-"+MON[p[1]-1]+"-"+p[0].slice(2)}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function toast(m){var t=$("toast");t.textContent=m;t.style.display="block";setTimeout(function(){t.style.display="none"},2600)}
+function used(gd){var q=0,v=0;D.usage.forEach(function(u){if(u.efs===gd){q+=+u.uq||0;v+=+u.uv||0}});return{q:q,v:v}}
+function bal(e){return (+e.qty||0)-used(e.gd).q}
+function left(s){if(!s)return{t:"",m:0};var p=s.split("-"),ex=new Date(+p[0],+p[1]-1+18,+p[2]),n=new Date();n.setHours(0,0,0,0);
+ if(ex<n)return{t:"Expired",m:-1,d:-1};var m=(ex.getFullYear()-n.getFullYear())*12+ex.getMonth()-n.getMonth(),t=new Date(n.getFullYear(),n.getMonth()+m,n.getDate());
+ if(t>ex){m--;t=new Date(n.getFullYear(),n.getMonth()+m,n.getDate())}var d=Math.round((ex-t)/864e5);return{t:m+" Months "+d+" Days Left",m:m,d:d}}
+function rowCls(e){var b=bal(e),l=left(e.date);if(e.clr)return"g";if(l.m<0)return"x";if(b<=0)return"g";if(l.m<3)return"o";return""}
+
+
+function addedAt(e){return parseInt(String(e.id).slice(0,-4),36)||0}
+function sorter(m){return function(a,b){
+  if(m==="do")return (a.date||"").localeCompare(b.date||"");
+  if(m==="an")return addedAt(b)-addedAt(a);
+  if(m==="ao")return addedAt(a)-addedAt(b);
+  if(m==="gd")return String(a.gd).localeCompare(String(b.gd));
+  if(m==="bh")return bal(b)-bal(a);
+  if(m==="bl")return bal(a)-bal(b);
+  return (b.date||"").localeCompare(a.date||"");
+}}
+function render(){
+ fill();var q=$("q").value.toLowerCase(),f=$("fl").value,fc=$("fc").value,fi=$("fi").value,dfrom=$("df").value,dto=$("dt").value;
+ var list=D.efs.slice().sort(sorter($("so").value)).filter(function(e){
+  var s=[e.gd,e.item,e.hs,e.country,e.cert].join(" ").toLowerCase();if(q&&s.indexOf(q)<0)return false;if(mode==="dash"&&e.clr)return false;if(fc&&e.country!==fc)return false;if(fi&&e.item!==fi)return false;if(dfrom&&(e.date||"")<dfrom)return false;if(dto&&(e.date||"")>dto)return false;
+  var b=bal(e);if(f==="open"&&b<=0)return false;if(f==="zero"&&b>0)return false;if(f==="soon"&&!(b>0&&left(e.date).m<3))return false;return true});
+ $("eb").innerHTML=list.length?list.map(function(e){var u=used(e.gd),b=bal(e),l=left(e.date);
+  return '<tr class="r '+rowCls(e)+'" data-id="'+e.id+'"><td>'+esc(e.gd)+'</td><td>'+nf(e.qty)+'</td><td>'+nf(e.val)+'</td><td>'+esc(e.item)+'</td><td>'+esc(e.hs)+'</td><td>'+nf(e.tax)+'%</td><td>'+esc(e.country)+'</td><td>'+nf(u.q)+'</td><td class="'+(b<0?"neg":"")+'">'+nf(b)+'</td><td>'+esc(e.cert)+'</td><td>'+fd(e.date)+'</td><td>'+l.t+'</td><td><input type="checkbox" class="ck" data-id="'+e.id+'" '+(e.clr?"checked":"")+'></td></tr>'}).join(""):'<tr><td colspan="13" class="empty">No EFS GD to show here. Click “+ Add EFS GD” or use bulk import.</td></tr>';
+ var tq=0,tv=0,ub=0,act=0;D.efs.forEach(function(e){if(e.clr)return;tq+=+e.qty||0;tv+=+e.val||0;var b=bal(e);if(b>0){act++;ub+=b}});
+ $("cards").innerHTML=[["Active EFS GD",D.efs.filter(function(e){return !e.clr}).length],["Cleared",D.efs.filter(function(e){return e.clr}).length],["With balance",act],["Total quantity",nf(tq)],["Total custom value",nf(tv)],["Total balance qty",nf(ub)],["Usage entries",D.usage.length]].map(function(c){return '<div class="card"><small>'+c[0]+'</small><b>'+c[1]+'</b></div>'}).join("");
+}
+function renderUsage(){
+ fillU();var q=$("qu").value.toLowerCase(),ue=$("ue").value,ua=$("udf").value,uz=$("udt").value;
+ var l=D.usage.slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"")}).filter(function(u){if(ue&&u.efs!==ue)return false;if(ua&&(u.date||"")<ua)return false;if(uz&&(u.date||"")>uz)return false;return !q||[u.efs,u.egd,u.date].join(" ").toLowerCase().indexOf(q)>=0});
+ $("ub").innerHTML=l.length?l.map(function(u){var e=byGd(u.efs);
+  return '<tr><td>'+fd(u.date)+'</td><td>'+esc(u.efs)+'</td><td>'+(e?esc(e.item)+" "+esc(e.hs):"")+'</td><td>'+esc(u.egd)+'</td><td>'+nf(u.uq)+'</td><td>'+nf(u.uv)+'</td><td>'+nf(u.eq)+'</td><td>'+nf(u.ev)+'</td><td><button class="b" onclick="editU(\''+u.id+'\')">Edit</button> <button class="b d" onclick="delU(\''+u.id+'\')">Delete</button></td></tr>'}).join(""):'<tr><td colspan="9" class="empty">No usage entries yet.</td></tr>';
+}
+function byGd(g){return D.efs.filter(function(e){return e.gd===g})[0]}
+function show(v){view=v;if(v==="dash"||v==="all")mode=v;["dash","det","usage"].forEach(function(s){$(s).classList.toggle("hide",s!==(v==="all"?"dash":v))});
+ document.querySelectorAll("nav button").forEach(function(b){b.classList.toggle("on",b.dataset.v===(v==="det"?"dash":v))});
+ if(v==="dash"||v==="all")render();if(v==="usage")renderUsage();if(v==="det")detail();
+ try{location.hash=v==="det"?"dash":v}catch(e){}}
+
+function detail(){
+ var e=D.efs.filter(function(x){return x.id===cur})[0];if(!e){show("dash");return}
+ var rows=D.usage.filter(function(u){return u.efs===e.gd}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"")}),run=+e.qty||0,tr="";
+ rows.forEach(function(u){var o=run;run=o-(+u.uq||0);
+  tr+='<tr class="y"><td>'+nf(o)+'</td><td>'+esc(e.gd)+'</td><td>'+esc(e.item)+" "+esc(e.hs)+'</td><td>'+nf(e.qty)+'</td><td>'+nf(e.val)+'</td><td>'+nf(e.tax)+'%</td><td>'+nf((+e.val||0)*(+e.tax||0)/100)+'</td><td>'+esc(e.country)+'</td><td>'+nf(u.uq)+", "+nf(u.uv)+'</td><td>'+nf(u.eq)+", "+nf(u.ev)+'</td><td>'+esc(u.egd)+'</td><td>'+fd(u.date)+'</td><td class="'+(run<0?"neg":"")+'">'+nf(run)+'</td><td><button class="b" onclick="editU(\''+u.id+'\')">Edit</button></td></tr>'});
+ var us=used(e.gd),l=left(e.date);
+ $("det").innerHTML='<div class="bar"><button class="b" id="bkD">← Back</button><h2 style="margin:0">'+esc(e.gd)+'</h2><span class="sp"></span><button class="b" onclick="addU(\''+esc(e.gd)+'\')">+ Add usage</button><button class="b" id="exD">Export record</button><label class="b"><input type="checkbox" id="clD" '+(e.clr?"checked":"")+'> Cleared ✓</label><button class="b" onclick="editE(\''+e.id+'\')">Edit</button><button class="b d" onclick="delE(\''+e.id+'\')">Delete</button></div>'+
+ '<div class="info">'+[["Item",e.item],["HS code",e.hs],["Quantity",nf(e.qty)],["Custom value",nf(e.val)],["Tax",nf(e.tax)+"%"],["Country",e.country],["Cert. no",e.cert||"-"],["Date",fd(e.date)],["Used qty / value",nf(us.q)+" / "+nf(us.v)],["Balance",nf(+e.qty-us.q)],["Time left",l.t]].map(function(c){return '<div class="card"><small>'+c[0]+'</small><b style="font-size:15px">'+esc(c[1])+'</b></div>'}).join("")+'</div>'+
+ '<div class="tw"><table><thead><tr><th>OPENING BALANCE</th><th>IMPORT GD#</th><th>ITEM NAME &amp; HS CODE</th><th>QUANTITY</th><th>CUSTOM VALUE</th><th>TAX %</th><th>DUTY</th><th>COUNTRY</th><th>EXPORT QUANTITY &amp; COST VALUE</th><th>EXPORT QTY MANUFACTURED &amp; VALUE</th><th>EXPORT GD#</th><th>DATE</th><th>CLOSING BALANCE</th><th></th></tr></thead><tbody>'+(tr||'<tr><td colspan="14" class="empty">No usage entered for this EFS GD yet.</td></tr>')+'</tbody></table></div>';
+ $("bkD").onclick=function(){show(mode)};$("clD").onchange=function(){var cb=this,want=cb.checked;cb.checked=!want;askPin(function(){e.clr=want;cb.checked=want;save();toast(want?"Marked as cleared":"Moved back to dashboard")})};
+ $("exD").onclick=function(){exportRows(rows.map(function(u){return usageRow(u)}),"EFS_"+e.gd)};
+}
+
+function modal(html){$("mbx").innerHTML=html;$("md").classList.add("on")}
+function closeM(){$("md").classList.remove("on")}
+function inp(id,l,t,v,w){return '<div class="'+(w||"")+'"><label>'+l+'</label><input id="'+id+'" type="'+(t||"text")+'" '+(t==="number"?'step="any" ':"")+'value="'+esc(v==null?"":v)+'"></div>'}
+function today(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function val(i){return $(i).value.trim()}
+function addE(){editE()}
+function editE(id){var e=D.efs.filter(function(x){return x.id===id})[0]||{date:today()};
+ modal('<h2>'+(id?"Edit":"Add")+' EFS GD</h2><div class="fg">'+inp("f_gd","EFS GD#","text",e.gd,"w")+inp("f_qty","Quantity","number",e.qty)+inp("f_val","Custom value","number",e.val)+inp("f_item","Item name","text",e.item)+inp("f_hs","HS code","text",e.hs)+inp("f_tax","Tax %","number",e.tax)+inp("f_cty","Country","text",e.country)+inp("f_cert","Analysis certificate complete no","text",e.cert)+inp("f_date","Date","date",e.date)+'</div><div class="ma"><button class="b" onclick="closeM()">Cancel</button><button class="b p" id="sv">Save</button></div>');
+ $("sv").onclick=function(){var g=val("f_gd");if(!g||!val("f_qty")){toast("EFS GD# and quantity are required");return}
+  if(D.efs.some(function(x){return x.gd===g&&x.id!==id})){toast("This EFS GD# already exists");return}
+  var o={id:id||uid(),gd:g,qty:+val("f_qty"),val:+val("f_val")||0,item:val("f_item"),hs:val("f_hs"),tax:+val("f_tax")||0,country:val("f_cty"),cert:val("f_cert"),date:val("f_date")};
+  if(id){var old=D.efs.filter(function(x){return x.id===id})[0];if(old.gd!==g)D.usage.forEach(function(u){if(u.efs===old.gd)u.efs=g});D.efs[D.efs.indexOf(old)]=o}else D.efs.push(o);
+  save();closeM();show(view==="det"?"det":mode);toast("Saved")}}
+function delE(id){var e=D.efs.filter(function(x){return x.id===id})[0];if(!confirm("Delete "+e.gd+" and all its usage entries?"))return;
+ D.efs=D.efs.filter(function(x){return x.id!==id});D.usage=D.usage.filter(function(u){return u.efs!==e.gd});save();show("dash")}
+function addU(g){editU(null,g)}
+function editU(id,g){if(!D.efs.length){toast("Add an EFS GD first");return}
+ var u=D.usage.filter(function(x){return x.id===id})[0]||{date:today(),efs:g||""};
+ var opts=D.efs.map(function(e){return '<option '+(e.gd===u.efs?"selected":"")+' value="'+esc(e.gd)+'">'+esc(e.gd)+" (bal "+nf(bal(e))+")</option>"}).join("");
+ modal('<h2>'+(id?"Edit":"Add")+' usage</h2><div class="fg">'+inp("u_date","Date","date",u.date)+'<div><label>Select EFS GD#</label><select id="u_efs">'+opts+'</select></div>'+inp("u_egd","Export GD#","text",u.egd,"w")+inp("u_uq","Used material qty","number",u.uq)+inp("u_uv","Used material value","number",u.uv)+inp("u_eq","Export qty","number",u.eq)+inp("u_ev","Export value","number",u.ev)+'</div><div class="ma"><button class="b" onclick="closeM()">Cancel</button><button class="b p" id="sv">Save</button></div>');
+ $("sv").onclick=function(){var g2=val("u_efs"),uq=+val("u_uq")||0,e=byGd(g2);if(!val("u_date")||!g2||!uq){toast("Date, EFS GD# and used qty are required");return}
+  var avail=bal(e)+(id&&u.efs===g2?+u.uq||0:0);if(uq>avail&&!confirm("Used qty "+nf(uq)+" is more than the balance "+nf(avail)+". Save anyway?"))return;
+  var o={id:id||uid(),date:val("u_date"),efs:g2,egd:val("u_egd"),uq:uq,uv:+val("u_uv")||0,eq:+val("u_eq")||0,ev:+val("u_ev")||0};
+  if(id)D.usage[D.usage.indexOf(u)]=o;else D.usage.push(o);save();closeM();show(view);toast("Saved")}}
+function delU(id){if(!confirm("Delete this usage entry?"))return;D.usage=D.usage.filter(function(u){return u.id!==id});save();show(view)}
+
+function efsRow(e){var l=left(e.date);return{"EFS GD#":e.gd,"QUANTITY":e.qty,"CUSTOM VALUE":e.val,"ITEM NAME":e.item,"HS CODE":e.hs,"TAX %":e.tax,"COUNTRY":e.country,"USED":used(e.gd).q,"BALANCE":bal(e),"ANALYSIS CERTIFICATE COMPLETE NO":e.cert,"DATE":fd(e.date),"TIME LEFT":l.t,"CLEARED":e.clr?"Yes":""}}
+function usageRow(u){var e=byGd(u.efs)||{};return{"DATE":fd(u.date),"EFS GD#":u.efs,"ITEM NAME":e.item||"","HS CODE":e.hs||"","EXPORT GD#":u.egd,"USED MATERIAL QTY":u.uq,"USED MATERIAL VALUE":u.uv,"EXPORT QTY":u.eq,"EXPORT VALUE":u.ev}}
+function exportRows(r,name){if(!r.length){toast("Nothing to export");return}var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r),"Data");dl(name+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
+function tpl(h,name){var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([h]),"Data");dl(name+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
+function pdate(v){if(v instanceof Date&&!isNaN(v))return v.getFullYear()+"-"+("0"+(v.getMonth()+1)).slice(-2)+"-"+("0"+v.getDate()).slice(-2);
+ if(typeof v==="number"){return pdate(new Date(Math.round((v-25569)*864e5)+12*36e5))}
+ v=String(v||"").trim();if(!v)return"";var m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[3]).slice(-2);
+ m=v.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})$/);if(m){var y=m[3].length==2?"20"+m[3]:m[3];return y+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2)}
+ m=v.match(/^(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*[-\s](\d{2,4})$/);if(m){var mi=MON.map(function(x){return x.toLowerCase()}).indexOf(m[2].toLowerCase());if(mi>=0){var y2=m[3].length==2?"20"+m[3]:m[3];return y2+"-"+("0"+(mi+1)).slice(-2)+"-"+("0"+m[1]).slice(-2)}}return""}
+function readFile(f,cb){var r=new FileReader();r.onload=function(){try{var wb=XLSX.read(r.result,{type:"array",cellDates:true}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{raw:true,defval:""});
+ cb(rows.map(function(o){var n={};Object.keys(o).forEach(function(k){n[k.toUpperCase().replace(/[^A-Z0-9]/g,"")]=o[k]});return n}))}catch(e){toast("Could not read that file")}};r.readAsArrayBuffer(f)}
+function pick(o,ks){for(var i=0;i<ks.length;i++){if(o[ks[i]]!==undefined&&o[ks[i]]!=="")return o[ks[i]]}return""}
+function num(v){return +String(v).replace(/,/g,"")||0}
+$("impE").onchange=function(ev){var f=ev.target.files[0];if(!f)return;readFile(f,function(rows){var a=0,s=0;
+ rows.forEach(function(o){var g=String(pick(o,["EFSGD"])).trim();if(!g||byGd(g)){if(g)s++;return}
+  D.efs.push({id:uid(),gd:g,qty:num(pick(o,["QUANTITY"])),val:num(pick(o,["CUSTOMVALUE"])),item:String(pick(o,["ITEMNAME","ITEM"])),hs:String(pick(o,["HSCODE"])),tax:num(pick(o,["TAX","TAX"])),country:String(pick(o,["COUNTRY"])),cert:String(pick(o,["ANALYSISCERTIFICATECOMPLETENO","ANALYSISCERTIFICATE"])),date:pdate(pick(o,["DATE"]))});a++});
+ save();render();toast(a+" EFS GD added"+(s?", "+s+" duplicates skipped":""))});ev.target.value=""};
+$("impU").onchange=function(ev){var f=ev.target.files[0];if(!f)return;readFile(f,function(rows){var a=0,s=0;
+ rows.forEach(function(o){var g=String(pick(o,["EFSGD"])).trim();if(!g||!byGd(g)){s++;return}
+  D.usage.push({id:uid(),date:pdate(pick(o,["DATE"])),efs:g,egd:String(pick(o,["EXPORTGD"])),uq:num(pick(o,["USEDMATERIALQTY","USEDMATIREALQTY"])),uv:num(pick(o,["USEDMATERIALVALUE","USEDMATIREALVALUE"])),eq:num(pick(o,["EXPORTQTY"])),ev:num(pick(o,["EXPORTVALUE"]))});a++});
+ save();renderUsage();toast(a+" usage entries added"+(s?", "+s+" skipped (EFS GD not found)":""))});ev.target.value=""};
+$("expE").onclick=function(){exportRows(D.efs.map(efsRow),"EFS_GD_List")};
+$("expU").onclick=function(){exportRows(D.usage.map(usageRow),"EFS_Usage_Report")};
+$("tplE").onclick=function(){tpl(["EFS GD#","QUANTITY","CUSTOM VALUE","ITEM NAME","HS CODE","TAX %","COUNTRY","ANALYSIS CERTIFICATE COMPLETE NO","DATE"],"EFS_import_template")};
+$("tplU").onclick=function(){tpl(["DATE","EFS GD#","EXPORT GD#","USED MATERIAL QTY","USED MATERIAL VALUE","EXPORT QTY","EXPORT VALUE"],"Usage_import_template")};
+$("bk").onclick=function(){var b=new Blob([JSON.stringify({app:"efs-tracker",saved:new Date().toISOString(),data:D},null,1)],{type:"application/json"}),x=0;dl("EFS_backup_"+today()+".json",b)};
+$("rs").onchange=function(ev){var f=ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var j=JSON.parse(r.result);if(!j.data||!j.data.efs||!j.data.usage)throw 0;
+ if(!confirm("Restore backup? This replaces all current data ("+D.efs.length+" EFS GD, "+D.usage.length+" usage entries) with "+j.data.efs.length+" EFS GD and "+j.data.usage.length+" usage entries."))return;D=j.data;save();show("dash");toast("Backup restored")}catch(e){toast("Invalid backup file")}};r.readAsText(f);ev.target.value=""};
+$("eb").onclick=function(ev){var c=ev.target.closest(".ck");if(c){var ce=D.efs.filter(function(x){return x.id===c.dataset.id})[0];var want=c.checked;c.checked=!want;askPin(function(){ce.clr=want;save();render();toast(want?"Marked as cleared":"Moved back to dashboard")});return}var t=ev.target.closest("tr.r");if(t){cur=t.dataset.id;show("det")}};
+$("addE").onclick=function(){editE()};$("addU").onclick=function(){editU()};
+$("q").oninput=render;["so","fl","fc","fi","df","dt"].forEach(function(i){$(i).onchange=render});$("qu").oninput=renderUsage;["ue","udf","udt"].forEach(function(i){$(i).onchange=renderUsage});
+$("clr").onclick=function(){["q","fl","fc","fi","df","dt"].forEach(function(i){$(i).value=""});render()};$("clu").onclick=function(){["qu","ue","udf","udt"].forEach(function(i){$(i).value=""});renderUsage()};$("rep").onclick=reportModal;
+$("md").onclick=function(ev){if(ev.target===$("md"))closeM()};
+document.querySelectorAll("nav button").forEach(function(b){b.onclick=function(){show(b.dataset.v)}});
+function dl(name,data){var c=window.claude&&window.claude.use?window.claude.use("downloads"):null;
+ return Promise.resolve(c).then(function(d){if(!d){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download=name;a.click();return}
+  return d.save({filename:name,data:data}).then(function(){toast("Saved "+name)})}).catch(function(e){if(!e||e.code!=="declined")toast("Could not save the file")})}
+function fill(){[["fc","country","Countries"],["fi","item","Items"]].forEach(function(a){var s=$(a[0]),v=s.value,set={};D.efs.forEach(function(e){if(e[a[1]])set[e[a[1]]]=1});s.innerHTML='<option value="">All '+a[2]+'</option>'+Object.keys(set).sort().map(function(k){return '<option>'+esc(k)+'</option>'}).join("");s.value=v;if(s.selectedIndex<0)s.selectedIndex=0})}
+function fillU(){var s=$("ue"),v=s.value;s.innerHTML='<option value="">All EFS GD</option>'+D.efs.map(function(e){return '<option>'+esc(e.gd)+'</option>'}).join("");s.value=v;if(s.selectedIndex<0)s.selectedIndex=0}
+function dmy(s){var p=s.split("-");return p[2]+"-"+p[1]+"-"+p[0]}
+function r4(n){return Math.round((+n||0)*1e4)/1e4}
+function hsT(h){h=String(h||"");return h.indexOf(".")>=0?h.replace(/0+$/,"").replace(/\.$/,""):h}
+function reportModal(){modal('<h2>EFS Report</h2><div class="fg">'+inp("r_f","From date","date","")+inp("r_t","To date","date",today())+inp("r_u","Upload date (used in file name)","date",today(),"w")+'</div><p class="note">Creates the EFS Reconciliation Statement in your standard 23-column format: one row for every usage entry inside the date range.</p><div class="ma"><button class="b" onclick="closeM()">Cancel</button><button class="b p" id="rg">Generate Excel</button></div>');$("rg").onclick=genReport}
+function genReport(){var f=val("r_f"),t=val("r_t"),up=val("r_u")||today();if(!f||!t||f>t){toast("Select a valid date range");return}
+ var rows=[];D.efs.slice().sort(function(a,b){return a.gd<b.gd?-1:a.gd>b.gd?1:0}).forEach(function(e){var run=+e.qty||0,rate=(+e.tax||0)/100;
+  D.usage.filter(function(u){return u.efs===e.gd}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"")}).forEach(function(u){var o=run;run=o-(+u.uq||0);if(u.date<f||u.date>t)return;
+   var ex=r4(u.eq)+", "+r4(u.ev);rows.push([r4(o),e.gd,e.item+" "+hsT(e.hs),+e.qty||0,+e.val||0,rate,(+e.val||0)*rate,e.country,r4(u.uq)+", "+r4(u.uv),ex,ex,u.egd,0,0,0,0,0,0,0,0,0,r4(run),0])})});
+ if(!rows.length){toast("No usage entries in that date range");return}
+ var H=["OpeningBalanceonFirstDayofReconciliationPeriod","GDNoDateorSalesTaxInvoiceNoDateforAcquisitionofInputGoods","DescriptionandPCTsofInputGoods","QuantityofEachItemReceived","ValueofEachItem","RateofDutyTaxesonEachItem","TotalDutyTaxesInvolved","CountryofOriginSalesTaxRegistrationNoofSupplier","QuantityandValueofInputGoodsUsedforManufactureofOutputGoods","QuantityandValueofGoodsManufactured","QuantityandValueofOutputGoodsExported","ExportGDNoandDate","QuantityandValueofFactoryRejects","QuantityandValueofWastage","QuantityandValueofGoodsProvidedtoVendorforFurtherProcessing","QuantityandValueofGoodsReturnedbyVendor","QuantityandValueofInputGoodsRemovedtoPremisesofIndirectExporterforFurtherProcessing","QuantityandValueofInputGoodsReceivedfromIndirectExporterafterFurtherProcessing","QuantityandValueofGoodsSoldintheDomesticMarket","QuantityandValueofGoodsTransferredtoanotherExporter","QuantityandValueofGoodsDestroyed","ClosingBalanceofInputGoodsontheLastDayofReconciliationPeriod","QuantityandValueofOutputGoodsNotExportedAndAvailableInPremises"];
+ var wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("Sheet1"),W=[22.3,38.7,50.7,21.6,18.3,22.1,26,31.3,39.3,26.6,45.7,30.7,14.6,18,18,18,18,18,18,18,18,31.9,23.7];
+ ws.addRow(H);rows.forEach(function(x){ws.addRow(x)});W.forEach(function(w,i){ws.getColumn(i+1).width=w});
+ ws.getRow(1).height=30.75;ws.getRow(1).eachCell(function(c){c.font={bold:true};c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFC6EFCE"}};c.alignment={horizontal:"center",vertical:"middle",wrapText:true}});
+ ws.eachRow(function(row,n){if(n>1)row.eachCell({includeEmpty:true},function(c,i){c.alignment={horizontal:"center"};if(i===1||i===22)c.numFmt="0.0000";if(i===4)c.numFmt="0.00";if(i===6)c.numFmt="0%"})});
+ ws.autoFilter={from:"A1",to:"W1"};
+ wb.xlsx.writeBuffer().then(function(buf){closeM();dl("EFS_Reconciliation_Statement_"+dmy(f)+"-"+dmy(t)+"_Upload_"+dmy(up)+".xlsx",buf);toast(rows.length+" rows in report")})}
+var PIN="2026";
+function askPin(ok){modal('<h2>Enter PIN</h2><input id="pin_i" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN"><div class="ma"><button class="b" onclick="closeM()">Cancel</button><button class="b p" id="pin_ok">Confirm</button></div>');
+ var i=$("pin_i");function go(){if(i.value===PIN){closeM();ok()}else{toast("Wrong PIN");i.value="";i.focus()}}
+ $("pin_ok").onclick=go;i.onkeydown=function(e){if(e.key==="Enter")go()};setTimeout(function(){i.focus()},50)}
+function pinned(fn){return function(){var a=arguments,t=this;askPin(function(){fn.apply(t,a)})}}
+editE=pinned(editE);delE=pinned(delE);editU=pinned(editU);delU=pinned(delU);
+["impE","impU","rs"].forEach(function(id){var h=$(id).onchange;$(id).onchange=function(ev){var inp=ev.target,f=inp.files[0];if(!f)return;inp.value="";askPin(function(){h.call(inp,{target:{files:[f],value:""}})})}});
+var GH=null,ghSha="",ghSynced=false,ghWt=0,ghBusy=false,ghAgain=false;
+try{GH=JSON.parse(localStorage.getItem("efs_gh")||"null")}catch(e){}
+function setSt(m){$("lk").textContent=m}function tm(){return new Date().toLocaleTimeString()}
+function ghU(){return "https://api.github.com/repos/"+GH.owner+"/"+GH.repo+"/contents/"+GH.path.split("/").map(encodeURIComponent).join("/")}
+function ghH(){return {"Authorization":"Bearer "+GH.token,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"}}
+function b64e(t){return btoa(unescape(encodeURIComponent(t)))}
+function b64d(t){return decodeURIComponent(escape(atob(t.replace(/\s/g,""))))}
+function ghPull(force,first){if(!GH)return Promise.resolve();
+ return fetch(ghU()+"?ref="+encodeURIComponent(GH.branch)+"&t="+Date.now(),{headers:ghH(),cache:"no-store"}).then(function(r){
+  if(r.status===404){ghSha="";ghSynced=true;ghPush();return null}
+  if(!r.ok)throw r.status;return r.json()}).then(function(j){if(!j)return;
+  if(!force&&j.sha===ghSha){setSt("GitHub · synced "+tm());return}
+  var p=j.content?Promise.resolve(b64d(j.content)):fetch(ghU()+"?ref="+encodeURIComponent(GH.branch),{headers:Object.assign(ghH(),{"Accept":"application/vnd.github.raw+json"})}).then(function(r){return r.text()});
+  return p.then(function(t){var d=JSON.parse(t);if(!d.data||!d.data.efs)throw 0;
+   if(first&&(D.efs.length||D.usage.length)&&!confirm("Replace the data in this browser ("+D.efs.length+" EFS GD, "+D.usage.length+" usage) with the GitHub file ("+d.data.efs.length+" EFS GD, "+d.data.usage.length+" usage)?")){GH=null;try{localStorage.removeItem("efs_gh")}catch(e){}ghSynced=false;setSt("GitHub sync");return}
+   ghSha=j.sha;ghSynced=true;D=d.data;try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}show(view==="det"?"dash":view);setSt("GitHub · synced "+tm())})
+ }).catch(function(e){ghSynced=false;setSt("GitHub error – check settings")})}
+function ghPush(){if(!GH||!ghSynced)return;clearTimeout(ghWt);setSt("GitHub · saving…");
+ ghWt=setTimeout(function(){if(ghBusy){ghAgain=true;return}ghBusy=true;
+  var body={message:"EFS data update "+new Date().toISOString(),content:b64e(JSON.stringify({app:"efs-tracker",saved:new Date().toISOString(),data:D},null,1)),branch:GH.branch};if(ghSha)body.sha=ghSha;
+  fetch(ghU(),{method:"PUT",headers:ghH(),body:JSON.stringify(body)}).then(function(r){
+   if(r.status===409||r.status===422){toast("Someone else changed the data. Loading the latest – please repeat your last change.");return ghPull(true)}
+   if(!r.ok)throw r.status;return r.json().then(function(j){ghSha=j.content.sha;setSt("GitHub · saved "+tm())})
+  }).catch(function(){setSt("GitHub save failed");toast("Could not save to GitHub – check internet and token")}).then(function(){ghBusy=false;if(ghAgain){ghAgain=false;ghPush()}})},800)}
+function ghModal(){var g=GH||{owner:"",repo:"",branch:"main",path:"data.json",token:""};
+ modal('<h2>GitHub sync</h2><div class="fg">'+inp("g_o","Owner (GitHub username)","text",g.owner)+inp("g_r","Data repository name","text",g.repo)+inp("g_b","Branch","text",g.branch)+inp("g_p","File path","text",g.path)+'<div class="w"><label>Access token</label><input id="g_t" type="password" autocomplete="off" value="'+esc(g.token)+'"></div></div><p class="note">Use a PRIVATE repository for the data. Make a fine-grained token for that repository only, with Contents: Read and write. The token is kept in this browser only, never in the page code.</p><div class="ma">'+(GH?'<button class="b d" id="g_x">Disconnect</button>':'')+'<button class="b" onclick="closeM()">Cancel</button><button class="b p" id="g_s">Connect &amp; sync</button></div>');
+ $("g_s").onclick=function(){var n={owner:val("g_o"),repo:val("g_r"),branch:val("g_b")||"main",path:val("g_p")||"data.json",token:val("g_t")};if(!n.owner||!n.repo||!n.token){toast("Owner, repository and token are required");return}
+  GH=n;try{localStorage.setItem("efs_gh",JSON.stringify(n))}catch(e){}ghSynced=false;ghSha="";closeM();setSt("GitHub · connecting…");ghPull(true,true)};
+ if($("g_x"))$("g_x").onclick=function(){GH=null;ghSynced=false;try{localStorage.removeItem("efs_gh")}catch(e){}setSt("GitHub sync");closeM();toast("Disconnected")}}
+$("lk").onclick=function(){askPin(ghModal)};
+window.addEventListener("focus",function(){if(GH&&ghSynced&&!document.querySelector(".modal.on"))ghPull(false)});
+setInterval(function(){if(GH&&ghSynced&&!ghBusy&&!document.querySelector(".modal.on"))ghPull(false)},60000);
+if(GH){setSt("GitHub · connecting…");ghPull(true)}
+load();show(["#usage","#all"].indexOf(location.hash)>=0?location.hash.slice(1):"dash");
+</script></body></html>
